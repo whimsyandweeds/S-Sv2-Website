@@ -109,5 +109,172 @@ Error generating stack: `+o.message+`
 </script>
   <script>(function(){function m(a){var h=a.getAttribute("href");if(!h)return;try{var u=new URL(h,document.baseURI);if((u.protocol==="http:"||u.protocol==="https:")&&u.host!==location.host){a.target="_blank";a.rel="noopener noreferrer";}}catch(e){}}function s(){document.querySelectorAll("a[href]").forEach(m);}if(document.readyState!=="loading"){s();}else{document.addEventListener("DOMContentLoaded",s);}document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest("a[href]");if(a){m(a);}},true);})();</script>
   
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+  .pointer-events-none.fixed.bottom-4.right-4 { display: none; }
+  .desk, .desk * { font-family: Inter, ui-sans-serif, system-ui, sans-serif; box-sizing: border-box; }
+  .desk { position: fixed; right: 20px; bottom: 20px; z-index: 60; }
+  .desk-btn {
+    height: 48px; padding: 0 18px; border-radius: 999px;
+    border: 1px solid #c4b4d4; background: #fffbf5; color: #2c2a25;
+    font-size: 14px; font-weight: 600; letter-spacing: 0.01em;
+    box-shadow: 0 10px 24px rgba(80,60,100,.08); cursor: pointer;
+  }
+  .desk-panel {
+    display: none; width: min(360px, calc(100vw - 32px));
+    margin-bottom: 10px; padding: 16px;
+    border: 1px solid #9b84b8; border-radius: 20px; background: #fffbf5;
+    box-shadow: 0 10px 24px rgba(80,60,100,.08); color: #2c2a25;
+  }
+  .desk.open .desk-panel { display: block; }
+  .desk-kicker { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #6f5a94; }
+  .desk-rule { margin: 8px 0 14px; font-size: 13px; line-height: 1.45; color: #2c2a25; }
+  .desk-prompts { display: flex; flex-direction: column; gap: 8px; }
+  .desk-prompts button, .desk-back, .desk-send {
+    border: 1px solid #c4b4d4; background: #fff; color: #2c2a25;
+    border-radius: 999px; min-height: 40px; padding: 8px 14px;
+    font-size: 13px; font-weight: 600; text-align: left; cursor: pointer;
+    box-shadow: 0 10px 24px rgba(80,60,100,.08);
+  }
+  .desk-back { width: auto; margin-bottom: 10px; }
+  .desk-send { width: 100%; text-align: center; background: #2c2a25; color: #fffbf5; margin-top: 8px; }
+  .desk-answer, .desk-note { font-size: 13px; line-height: 1.5; }
+  .desk-answer p { margin: 0 0 8px; }
+  .desk-form { display: flex; flex-direction: column; gap: 8px; }
+  .desk-form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; }
+  .desk-form input, .desk-form select, .desk-form textarea {
+    border: 1px solid #c4b4d4; border-radius: 10px; background: #fff;
+    padding: 8px 10px; font: inherit; font-size: 13px; font-weight: 400; color: #2c2a25;
+  }
+  .desk-form textarea { min-height: 72px; resize: vertical; }
+  .desk-check { flex-direction: row; align-items: flex-start; gap: 8px; font-weight: 500; line-height: 1.4; }
+  .desk-check input { margin-top: 2px; }
+  .desk-fine { font-size: 12px; line-height: 1.45; color: #6f5a94; }
+  .desk-received { font-size: 14px; line-height: 1.45; }
+  @media (hover: hover) and (pointer: fine) {
+    .desk-btn, .desk-prompts button, .desk-back, .desk-send { transition: transform 180ms ease-out, box-shadow 180ms ease-out, border-color 180ms ease-out; }
+    .desk-btn:hover, .desk-prompts button:hover, .desk-back:hover, .desk-send:hover {
+      transform: translateY(-2px); border-color: #9b84b8;
+      box-shadow: 0 14px 28px rgba(80,60,100,.14);
+    }
+  }
+</style>
+<div class="desk" id="partner-desk">
+  <div class="desk-panel" id="desk-panel" hidden></div>
+  <button class="desk-btn" type="button" id="desk-toggle">Partner desk</button>
+</div>
+<script>
+(function () {
+  var root = document.getElementById("partner-desk");
+  var panel = document.getElementById("desk-panel");
+  var toggle = document.getElementById("desk-toggle");
+  var view = "home";
+  function esc(s) {
+    return String(s || "").replace(/[&<>"]/g, function (c) {
+      return { "&": "&", "<": "<", ">": ">", '"': """ }[c];
+    });
+  }
+  function home() {
+    view = "home";
+    panel.innerHTML =
+      '<div class="desk-kicker">Partner desk</div>' +
+      '<p class="desk-rule">Referral only. We do not contact her without a safe channel.</p>' +
+      '<div class="desk-prompts">' +
+      '<button type="button" data-go="refer">Refer a client</button>' +
+      '<button type="button" data-go="intro">Partner intro</button>' +
+      '<button type="button" data-go="fees">What the flat-fee covers</button>' +
+      '</div>';
+  }
+  function fees() {
+    view = "fees";
+    panel.innerHTML =
+      '<button class="desk-back" type="button" data-go="home">Back</button>' +
+      '<div class="desk-answer">' +
+      '<p>Exit Blueprint is $250: audit, budget, credit triage, document checklist.</p>' +
+      '<p>Rapid Placement is $750: that, plus housing, utilities, movers, and handoff.</p>' +
+      '<p>No retainers. No legal advice. No coaching.</p>' +
+      '<p class="desk-fine">Sensitive details go to Signal or Proton, not this box.</p>' +
+      '</div>';
+  }
+  function intro() {
+    view = "intro";
+    panel.innerHTML =
+      '<button class="desk-back" type="button" data-go="home">Back</button>' +
+      '<form class="desk-form" id="desk-form">' +
+      '<label>Name<input name="name" required autocomplete="name"></label>' +
+      '<label>Role<input name="role" required></label>' +
+      '<label>Email<input name="email" type="email" required autocomplete="email"></label>' +
+      '<label>Note<textarea name="note"></textarea></label>' +
+      '<button class="desk-send" type="submit">Send</button>' +
+      '</form>';
+  }
+  function refer(checked) {
+    view = "refer";
+    var rest = checked
+      ? '<label>Partner name<input name="partner" required></label>' +
+        '<label>Partner Signal or Proton<input name="channel" required></label>' +
+        '<label>Her first name or initials<input name="first" required></label>' +
+        '<label>City, not the street<input name="city" required></label>' +
+        '<label>Pets<select name="pets" required><option value="">Select</option><option>Yes</option><option>No</option></select></label>' +
+        '<label>Window<select name="window" required><option value="">Select</option><option>30</option><option>60</option><option>90</option></select></label>' +
+        '<label>Budget band<input name="budget" required></label>' +
+        '<label>Note<textarea name="note"></textarea></label>' +
+        '<p class="desk-fine">The address and full name go on the safe channel after we reply. This page does not keep a client list.</p>' +
+        '<button class="desk-send" type="submit">Send</button>'
+      : "";
+    panel.innerHTML =
+      '<button class="desk-back" type="button" data-go="home">Back</button>' +
+      '<form class="desk-form" id="desk-form">' +
+      '<label class="desk-check"><input type="checkbox" name="consent"' + (checked ? " checked" : "") + '>She knows about this referral, and the safe channel is Signal, Proton, or the partner.</label>' +
+      rest +
+      '</form>';
+  }
+  function openDesk() {
+    root.classList.add("open");
+    panel.hidden = false;
+    home();
+  }
+  function closeDesk() {
+    root.classList.remove("open");
+    panel.hidden = true;
+    panel.innerHTML = "";
+  }
+  function send(subject, fields) {
+    var body = Object.keys(fields).map(function (k) { return k + ": " + fields[k]; }).join("\n");
+    window.location.href = "mailto:whimsyandweeds@gmail.com?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+    panel.innerHTML = '<p class="desk-received">Received. We reply on the channel you named.</p>';
+    setTimeout(closeDesk, 1600);
+  }
+  toggle.addEventListener("click", function () {
+    if (root.classList.contains("open")) closeDesk();
+    else openDesk();
+  });
+  panel.addEventListener("click", function (e) {
+    var go = e.target && e.target.getAttribute && e.target.getAttribute("data-go");
+    if (!go) return;
+    if (go === "home") home();
+    if (go === "fees") fees();
+    if (go === "intro") intro();
+    if (go === "refer") refer(false);
+  });
+  panel.addEventListener("change", function (e) {
+    if (e.target && e.target.name === "consent") refer(e.target.checked);
+  });
+  panel.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var form = e.target;
+    var data = {};
+    Array.prototype.forEach.call(form.elements, function (el) {
+      if (!el.name || el.type === "submit") return;
+      if (el.type === "checkbox") data[el.name] = el.checked ? "yes" : "no";
+      else data[el.name] = el.value;
+    });
+    var subject = view === "intro" ? "Partner intro" : "Refer a client";
+    send(subject, data);
+  });
+})();
+</script>
+
 </body>
 </html>
