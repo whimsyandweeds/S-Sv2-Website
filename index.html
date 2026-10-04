@@ -124,7 +124,7 @@ Error generating stack: `+o.message+`
   }
   .desk-btn span { display: block; transform: rotate(8deg); }
   .desk-panel {
-    display: none; width: min(360px, calc(100vw - 32px));
+    display: none; width: min(360px, calc(100vw - 32px)); max-height: min(70vh, 560px); overflow: auto;
     margin-bottom: 10px; padding: 16px;
     border: 1px solid #9b84b8; border-radius: 20px; background: #fffbf5;
     box-shadow: 0 10px 24px rgba(80,60,100,.08); color: #2c2a25;
@@ -133,16 +133,16 @@ Error generating stack: `+o.message+`
   .desk-kicker { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #6f5a94; }
   .desk-rule { margin: 8px 0 14px; font-size: 13px; line-height: 1.45; }
   .desk-prompts { display: flex; flex-direction: column; gap: 8px; }
-  .desk-prompts button, .desk-back, .desk-send {
+  .desk-prompts button, .desk-back, .desk-send, .desk-code-go {
     border: 1px solid #c4b4d4; background: #fff; color: #2c2a25;
     border-radius: 999px; min-height: 40px; padding: 8px 14px;
     font-size: 13px; font-weight: 600; text-align: left; cursor: pointer;
     box-shadow: 0 10px 24px rgba(80,60,100,.08);
   }
   .desk-back { width: auto; margin-bottom: 10px; }
-  .desk-send { width: 100%; text-align: center; background: #2c2a25; color: #fffbf5; margin-top: 8px; }
-  .desk-answer, .desk-note { font-size: 13px; line-height: 1.5; }
-  .desk-answer p { margin: 0 0 8px; }
+  .desk-send, .desk-code-go { text-align: center; background: #2c2a25; color: #fffbf5; }
+  .desk-send { width: 100%; margin-top: 8px; }
+  .desk-answer p { margin: 0 0 8px; font-size: 13px; line-height: 1.5; }
   .desk-form { display: flex; flex-direction: column; gap: 8px; }
   .desk-form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; }
   .desk-form input, .desk-form select, .desk-form textarea {
@@ -152,14 +152,16 @@ Error generating stack: `+o.message+`
   .desk-form textarea { min-height: 72px; resize: vertical; }
   .desk-check { flex-direction: row; align-items: flex-start; gap: 8px; font-weight: 500; line-height: 1.4; }
   .desk-check input { margin-top: 2px; }
-  .desk-fine { font-size: 12px; line-height: 1.45; color: #6f5a94; }
+  .desk-fine { font-size: 12px; line-height: 1.45; color: #6f5a94; margin: 4px 0 0; }
   .desk-received { font-size: 14px; line-height: 1.45; }
+  .desk-code { margin-top: 14px; padding-top: 12px; border-top: 1px solid #c4b4d4; display: flex; gap: 8px; align-items: end; }
+  .desk-code label { flex: 1; display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; }
+  .desk-code input { border: 1px solid #c4b4d4; border-radius: 10px; background: #fff; padding: 8px 10px; font: inherit; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
   @media (hover: hover) and (pointer: fine) {
-    .desk-btn, .desk-prompts button, .desk-back, .desk-send { transition: transform 180ms ease-out, box-shadow 180ms ease-out, border-color 180ms ease-out; }
+    .desk-btn, .desk-prompts button, .desk-back, .desk-send, .desk-code-go { transition: transform 180ms ease-out, box-shadow 180ms ease-out, border-color 180ms ease-out; }
     .desk-btn:hover { transform: rotate(-8deg) translateY(-2px); border-color: #9b84b8; box-shadow: 0 14px 28px rgba(80,60,100,.14); }
-    .desk-prompts button:hover, .desk-back:hover, .desk-send:hover {
-      transform: translateY(-2px); border-color: #9b84b8;
-      box-shadow: 0 14px 28px rgba(80,60,100,.14);
+    .desk-prompts button:hover, .desk-back:hover, .desk-send:hover, .desk-code-go:hover {
+      transform: translateY(-2px); border-color: #9b84b8; box-shadow: 0 14px 28px rgba(80,60,100,.14);
     }
   }
 </style>
@@ -173,9 +175,30 @@ Error generating stack: `+o.message+`
   var panel = document.getElementById("desk-panel");
   var toggle = document.getElementById("desk-toggle");
   var view = "home";
+  var liveCode = "";
+  var enabled = [];
+  fetch("desk-codes.json", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (list) {
+    if (Array.isArray(list)) enabled = list.map(function (c) { return String(c).trim().toUpperCase(); }).filter(Boolean);
+  }).catch(function () { enabled = []; });
+  function used() {
+    try { return JSON.parse(localStorage.getItem("ss-desk-used") || "[]"); } catch (e) { return []; }
+  }
+  function markUsed(code) {
+    var list = used();
+    if (list.indexOf(code) === -1) list.push(code);
+    try { localStorage.setItem("ss-desk-used", JSON.stringify(list)); } catch (e) {}
+  }
+  function codeOn(code) {
+    code = String(code || "").trim().toUpperCase();
+    if (!/^[A-Z0-9]{6}$/.test(code)) return "";
+    if (enabled.indexOf(code) === -1) return "";
+    if (used().indexOf(code) !== -1) return "";
+    return code;
+  }
   function home() {
     view = "home";
-    panel.innerHTML = '<div class="desk-kicker">Partner desk</div><p class="desk-rule">Referral only. We do not contact her without a safe channel.</p><div class="desk-prompts"><button type="button" data-go="refer">Refer a client</button><button type="button" data-go="intro">Partner intro</button><button type="button" data-go="fees">What the flat-fee covers</button></div>';
+    liveCode = "";
+    panel.innerHTML = '<div class="desk-kicker">Partner desk</div><p class="desk-rule">Referral only. We do not contact her without a safe channel.</p><div class="desk-prompts"><button type="button" data-go="refer">Refer a client</button><button type="button" data-go="intro">Partner intro</button><button type="button" data-go="fees">What the flat-fee covers</button></div><form class="desk-code" id="desk-code-form"><label>Desk code<input name="code" maxlength="6" autocomplete="off" spellcheck="false"></label><button class="desk-code-go" type="submit">Open</button></form>';
   }
   function fees() {
     view = "fees";
@@ -183,22 +206,32 @@ Error generating stack: `+o.message+`
   }
   function intro() {
     view = "intro";
-    panel.innerHTML = '<button class="desk-back" type="button" data-go="home">Back</button><form class="desk-form" id="desk-form"><label>Name<input name="name" required autocomplete="name"></label><label>Role<input name="role" required></label><label>Email<input name="email" type="email" required autocomplete="email"></label><label>Note<textarea name="note"></textarea></label><button class="desk-send" type="submit">Send</button></form>';
+    panel.innerHTML = '<button class="desk-back" type="button" data-go="home">Back</button><form class="desk-form" id="desk-form"><label>Name<input name="name" required autocomplete="name"></label><label>Mobile<input name="mobile" type="tel" required autocomplete="tel"></label><label>Email<input name="email" type="email" required autocomplete="email"></label><button class="desk-send" type="submit">Send</button></form>';
   }
   function refer(checked) {
     view = "refer";
     var rest = checked
-      ? '<label>Partner name<input name="partner" required></label><label>Partner Signal or Proton<input name="channel" required></label><label>Her first name or initials<input name="first" required></label><label>City, not the street<input name="city" required></label><label>Pets<select name="pets" required><option value="">Select</option><option>Yes</option><option>No</option></select></label><label>Window<select name="window" required><option value="">Select</option><option>30</option><option>60</option><option>90</option></select></label><label>Budget band<input name="budget" required></label><label>Note<textarea name="note"></textarea></label><p class="desk-fine">The address and full name go on the safe channel after we reply. This page does not keep a client list.</p><button class="desk-send" type="submit">Send</button>'
+      ? '<label>Partner name<input name="partner" required></label><label>Mobile<input name="mobile" type="tel" required></label><label>Email<input name="email" type="email" required></label><label>Her first name or initials<input name="first" required></label><label>City<input name="city" required></label><label>Pets<select name="pets" required><option value="">Select</option><option>Yes</option><option>No</option></select></label><label>Window<select name="window" required><option value="">Select</option><option>30</option><option>60</option><option>90</option></select></label><label>Budget band<input name="budget" required></label><label>Note<textarea name="note"></textarea></label><p class="desk-fine">No street. No last name. No case number. The address goes in with the desk code, not here.</p><button class="desk-send" type="submit">Send</button>'
       : '';
-    panel.innerHTML = '<button class="desk-back" type="button" data-go="home">Back</button><form class="desk-form" id="desk-form"><label class="desk-check"><input type="checkbox" name="consent"' + (checked ? ' checked' : '') + '>She knows about this referral, and the safe channel is Signal, Proton, or the partner.</label>' + rest + '</form>';
+    panel.innerHTML = '<button class="desk-back" type="button" data-go="home">Back</button><form class="desk-form" id="desk-form"><label class="desk-check"><input type="checkbox" name="consent"' + (checked ? ' checked' : '') + '>She knows, and the safe channel is Signal, Proton, or the partner.</label>' + rest + '</form>';
+  }
+  function logistics(code) {
+    view = "code";
+    liveCode = code;
+    panel.innerHTML = '<button class="desk-back" type="button" data-go="home">Back</button><form class="desk-form" id="desk-form"><label>Street<input name="street" required></label><label>Unit<input name="unit"></label><label>City<input name="city" required></label><label>Date she can leave<input name="date" type="date" required></label><label>Pets<select name="pets" required><option value="">Select</option><option>Yes</option><option>No</option></select></label><label>What has to move<textarea name="move" required></textarea></label><label>Utility accounts<textarea name="utilities" required></textarea></label><label>Channel she will answer on<input name="channel" required></label><button class="desk-send" type="submit">Submit</button></form><p class="desk-fine">This page is not Signal. Anything she does not want in email goes to Signal or Proton. This door is for the placement details, and it still lands in the inbox.</p>';
   }
   function openDesk() { root.classList.add("open"); home(); }
-  function closeDesk() { root.classList.remove("open"); panel.innerHTML = ""; }
+  function closeDesk() { root.classList.remove("open"); panel.innerHTML = ""; liveCode = ""; }
   function send(subject, fields) {
     var body = Object.keys(fields).map(function (k) { return k + ": " + fields[k]; }).join("\n");
     window.location.href = "mailto:whimsyandweeds@gmail.com?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-    panel.innerHTML = '<p class="desk-received">Received. We reply on the channel you named.</p>';
-    setTimeout(closeDesk, 1600);
+    if (view === "code") {
+      markUsed(liveCode);
+      panel.innerHTML = '<p class="desk-received">Received. We reply on the channel she named.</p>';
+    } else {
+      panel.innerHTML = '<p class="desk-received">We will text a desk code to the number you just gave. She uses that code on this same button. The address goes in there, not in this form.</p>';
+    }
+    setTimeout(closeDesk, 2800);
   }
   toggle.addEventListener("click", function () {
     if (root.classList.contains("open")) closeDesk();
@@ -219,12 +252,19 @@ Error generating stack: `+o.message+`
   panel.addEventListener("submit", function (e) {
     e.preventDefault();
     var form = e.target;
+    if (form.id === "desk-code-form") {
+      var good = codeOn(form.code.value);
+      if (!good) return;
+      logistics(good);
+      return;
+    }
     var data = {};
     Array.prototype.forEach.call(form.elements, function (el) {
       if (!el.name || el.type === "submit") return;
       data[el.name] = el.type === "checkbox" ? (el.checked ? "yes" : "no") : el.value;
     });
-    send(view === "intro" ? "Partner intro" : "Refer a client", data);
+    var subject = view === "intro" ? "Partner intro" : view === "code" ? "Desk code " + liveCode : "Refer a client";
+    send(subject, data);
   });
 })();
 </script>
